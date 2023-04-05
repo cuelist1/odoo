@@ -1,0 +1,45 @@
+version: '3.1'
+
+services:
+  db:
+    image: postgres:11-alpine
+    networks:
+      - "local"
+      - "dbgui"
+    environment:
+      - "POSTGRES_PASSWORD=${POSTGRES_ROOT_PASSWORD}"
+      - "POSTGRES_DB=odooadd"
+      - "POSTGRES_USER=odoo"
+
+  odoo:
+    image: odoo:latest
+    networks:
+      - "local"
+      - "rvproxy"
+    volumes:
+      - "db-data:/var/lib/postgresql/data/pgdata"
+    environment:
+      - "HOST=db"
+      - "USER=odoo"
+      - "PASSWORD=${POSTGRES_ROOT_PASSWORD}"
+    deploy:
+      labels:
+        - "traefik.enable=true"
+        - "traefik.port=8069"
+        - "traefik.docker.network=traefik-net"
+        - "traefik.frontend.rule=Host:${TRAEFIK_FR_Host}"
+        - "traefik.backend=${DOCKERCLOUD_CONTAINER_HOSTNAME}"
+
+networks:
+  local:
+    driver: overlay
+  dbgui:
+    external:
+      name: adminer-net
+  rvproxy:
+    external:
+      name: traefik-net
+
+volumes:
+  db-data:
+    driver: local
